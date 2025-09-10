@@ -11,7 +11,6 @@ SQS Worker is a Python library that provides a simple and efficient way to manag
 - Easy-to-use worker framework for SQS message processing
 - Built-in error handling and exception management  
 - Type-safe message models using Pydantic
-- Integration with AWS SQS via boto3
 - Support for observability tools
 
 ## Installation
