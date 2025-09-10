@@ -1,5 +1,4 @@
 import logging
-import threading
 
 import boto3
 import mypy_boto3_sqs.client
@@ -36,20 +35,17 @@ class MyWorker(
             queue_name=queue_name,
             metrics_instrumentator=metrics_instrumentator,
             payload_class=MessagePayload,
-            max_messages=2,
         )
 
     def work(
         self,
         messages: list[sqs_worker.models.Message[MessagePayload]],
     ) -> None:
-        thread_id = threading.get_ident()
         for message in messages:
-            print(f'Thread {thread_id}: Processing message with: {message.payload.value}')
+            print(f'Processing message with: {message.payload.value}')
 
 
 def main() -> None:
-    # Thread safe clients only
     metrics_instrumentator = obsv_tools.metrics.instrumentator.Instrumentator(
         server_port=9090,
     )
@@ -62,7 +58,6 @@ def main() -> None:
         aws_secret_access_key='test',
     )
     queue_name = 'my-queue'
-    number_of_workers = 10
 
     if not sqs_utils.sqs_connected(sqs_client=sqs_client):
         raise RuntimeError('Cannot connect to SQS. Please ensure LocalStack is running by executing "localstack start".')
@@ -72,12 +67,11 @@ def main() -> None:
         queue_name=queue_name,
     )
 
-    for _ in range(number_of_workers):
-        sqs_utils.send_hello_message(
-            sqs_client=sqs_client,
-            queue_name=queue_name,
-            message=sqs_worker.models.Message(
-                version='1.0',
+    sqs_utils.send_hello_message(
+        sqs_client=sqs_client,
+        queue_name=queue_name,
+        message=sqs_worker.models.Message(
+            version='1.0',
             msg_type='greeting',
             payload=MessagePayload(value='Hello, World!'),
         ),
@@ -85,20 +79,13 @@ def main() -> None:
 
     def worker_factory():
         return MyWorker(
-            sqs_client=boto3.client(
-                'sqs',
-                endpoint_url='http://localhost:4566',
-                region_name='us-east-1',
-                aws_access_key_id='test',
-                aws_secret_access_key='test',
-            ),
+            sqs_client=sqs_client,
             queue_name=queue_name,
             metrics_instrumentator=metrics_instrumentator,
         )
 
-    sqs_worker.worker.multiple(
+    sqs_worker.worker.single(
         worker_factory=worker_factory,
-        n=10,
     )
 
 

@@ -50,10 +50,10 @@ class Worker:
         self.max_retry_attempts = max_retry_attempts
 
         self.metrics_instrumentator.add_counter(
-            counter_name=self.EXCEPTIONS_METRIC_NAME,
+            name=self.EXCEPTIONS_METRIC_NAME,
             description='Exception Counter',
         ).add_histogram(
-            histogram_name=self.WORK_LATENCY_METRIC_NAME,
+            name=self.WORK_LATENCY_METRIC_NAME,
             description='Time spent working on message',
         )
 
