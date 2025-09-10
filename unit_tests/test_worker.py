@@ -141,12 +141,16 @@ class TestWorkerInit:
             metrics_instrumentator=mock_instrumentator,
         )
         
-        mock_instrumentator.add_counter.assert_called_once_with(
-            counter_name='sqs.manager.exceptions',
+        mock_instrumentator.add_counter.assert_called_with(
+            name='sqs.worker.work.messages',
+            description='Number of messages processed',
+        )
+        mock_instrumentator.add_counter.assert_called_with(
+            name='sqs.worker.exceptions',
             description='Exception Counter',
         )
         mock_instrumentator.add_histogram.assert_called_once_with(
-            histogram_name='sqs.manager.work.latency',
+            name='sqs.worker.work.latency',
             description='Time spent working on message',
         )
 

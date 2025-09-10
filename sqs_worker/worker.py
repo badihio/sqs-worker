@@ -19,8 +19,9 @@ MAX_BATCH_SIZE = 10
 
 
 class Worker:
-    EXCEPTIONS_METRIC_NAME = 'sqs.manager.exceptions'
-    WORK_LATENCY_METRIC_NAME = 'sqs.manager.work.latency'
+    EXCEPTIONS_METRIC_NAME = 'sqs.worker.exceptions'
+    WORK_MESSAGES_METRIC_NAME = 'sqs.worker.work.messages'
+    WORK_LATENCY_METRIC_NAME = 'sqs.worker.work.latency'
 
     def __init__(
         self,
@@ -56,6 +57,9 @@ class Worker:
         self.metrics_instrumentator.add_counter(
             name=self.EXCEPTIONS_METRIC_NAME,
             description='Exception Counter',
+        ).add_counter(
+            name=self.WORK_MESSAGES_METRIC_NAME,
+            description='Number of messages processed',
         ).add_histogram(
             name=self.WORK_LATENCY_METRIC_NAME,
             description='Time spent working on message',
@@ -143,6 +147,14 @@ class Worker:
                     extra={
                         'worker_name': self.name,
                     },
+                )
+
+                self.metrics_instrumentator.increment_counter(
+                    name=self.WORK_MESSAGES_METRIC_NAME,
+                    attributes={
+                        'worker_name': self.name,
+                    },
+                    amount=len(messages),
                 )
 
                 self.metrics_instrumentator.record_histogram(
@@ -361,7 +373,7 @@ class Worker:
         exception: Exception,
         messages: list[models.Message],
     ) -> None:
-        raise exception()
+        pass
 
 
 def single(
