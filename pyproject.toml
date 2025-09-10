@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "sqs-worker"
-version = "0.2.0"
+version = "0.3.0"
 description = "Manage workers triggered by AWS SQS messages"
 readme = "README.md"
 license = "GPL-3.0-or-later"
@@ -38,4 +38,5 @@ Issues = "https://github.com/badihio/sqs-worker/issues"
 [dependency-groups]
 dev = [
     "pytest>=8.4.2",
+    "ruff>=0.13.0",
 ]
