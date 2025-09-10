@@ -49,7 +49,9 @@ class MyWorker(
     ) -> None:
         thread_id = threading.get_ident()
         for message in messages:
-            print(f'Thread {thread_id}: Processing message with: {message.payload.value}')
+            logger.info(
+                msg=f'Thread {thread_id}: Processing message with: {message.payload.value}',
+            )
 
 
 def main() -> None:
@@ -102,7 +104,7 @@ def main() -> None:
 
     sqs_worker.worker.multiple(
         worker_factory=worker_factory,
-        n=10,
+        n=number_of_workers,
     )
 
 

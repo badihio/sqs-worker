@@ -1,15 +1,14 @@
 import datetime
 import logging
+import random
 import threading
 import os
+import time
 
 import boto3
-import mypy_boto3_sqs.client
 import pydantic
 import obsv_tools.metrics.instrumentator
 import sqs_worker
-
-import sqs_utils
 
 
 logger = logging.getLogger('sqs_worker_example')
@@ -29,7 +28,7 @@ class MyWorker(
 
     def __init__(
         self,
-        sqs_client: mypy_boto3_sqs.client.SQSClient,
+        sqs_client,
         queue_name: str,
         metrics_instrumentator: obsv_tools.metrics.instrumentator.Instrumentator,
     ) -> None:
@@ -41,7 +40,7 @@ class MyWorker(
             metrics_instrumentator=metrics_instrumentator,
             payload_class=MessagePayload,
             max_messages=2,
-            idle_limit=datetime.timedelta(seconds=2),
+            idle_limit=datetime.timedelta(minutes=10),
         )
 
     def work(
@@ -50,13 +49,55 @@ class MyWorker(
     ) -> None:
         thread_id = threading.get_ident()
         for message in messages:
-            print(f'Thread {thread_id}: Processing message with: {message.payload.value}')
+            wait_time = random.uniform(0.1, 9.5)
+            time.sleep(wait_time)
+
+            logger.info(
+                msg=f'Thread {thread_id}: Finished processing message with: {message.payload.value}',
+            )
+
+
+def wait_for_sqs_queue(
+    sqs_client,
+    queue_name: str,
+) -> None:
+    max_retries = 30
+    for i in range(max_retries):
+        try:
+            sqs_client.list_queues()
+
+            sqs_client.get_queue_url(QueueName=queue_name)
+            logger.info(f'Queue {queue_name} is available')
+
+            return
+        except sqs_client.exceptions.QueueDoesNotExist:
+            logger.info(
+                msg=f'Queue {queue_name} does not exist yet, waiting...',
+                extra={
+                    'queue_name': queue_name,
+                    'attempt': i + 1,
+                    'max_retries': max_retries,
+                },
+            )
+            time.sleep(2)
+        except Exception:
+            logger.info(
+                msg='Waiting for SQS service...',
+                extra={
+                    'queue_name': queue_name,
+                    'attempt': i + 1,
+                    'max_retries': max_retries,
+                },
+            )
+            time.sleep(2)
+
+    raise Exception(f'Queue {queue_name} is not available after waiting')
 
 
 def main() -> None:
     # Thread safe clients only
     metrics_instrumentator = obsv_tools.metrics.instrumentator.Instrumentator(
-        server_port=9090,
+        server_port=8000,
     )
 
     sqs_client = boto3.client(
@@ -66,23 +107,9 @@ def main() -> None:
         aws_access_key_id=os.environ.get('AWS_ACCESS_KEY_ID', 'test'),
         aws_secret_access_key=os.environ.get('AWS_SECRET_ACCESS_KEY', 'test'),
     )
-    queue_name = 'my-queue'
-    number_of_workers = 10
-
-    sqs_utils.ensure_queue_exists(
+    wait_for_sqs_queue(
         sqs_client=sqs_client,
-        queue_name=queue_name,
-    )
-
-    for _ in range(number_of_workers):
-        sqs_utils.send_hello_message(
-            sqs_client=sqs_client,
-            queue_name=queue_name,
-            message=sqs_worker.models.Message(
-                version='1.0',
-                msg_type='greeting',
-                payload=MessagePayload(value='Hello, World!'),
-            ),
+        queue_name=os.environ['SQS_QUEUE_NAME'],
     )
 
     def worker_factory():
@@ -94,13 +121,13 @@ def main() -> None:
                 aws_access_key_id=os.environ.get('AWS_ACCESS_KEY_ID', 'test'),
                 aws_secret_access_key=os.environ.get('AWS_SECRET_ACCESS_KEY', 'test'),
             ),
-            queue_name=queue_name,
+            queue_name=os.environ['SQS_QUEUE_NAME'],
             metrics_instrumentator=metrics_instrumentator,
         )
 
     sqs_worker.worker.multiple(
         worker_factory=worker_factory,
-        n=10,
+        n=1,
     )
 
 
