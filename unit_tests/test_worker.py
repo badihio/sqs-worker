@@ -145,12 +145,12 @@ class TestWorkerInit:
 
         assert mock_instrumentator.add_counter.call_args_list == [
             call(
-                name='sqs.worker.exceptions',
-                description='Exception Counter',
+                name="sqs.worker.exceptions",
+                description="Exception Counter",
             ),
             call(
-                name='sqs.worker.work.messages',
-                description='Number of messages processed',
+                name="sqs.worker.work.messages",
+                description="Number of messages processed",
             ),
         ]
         mock_instrumentator.add_histogram.assert_called_once_with(
