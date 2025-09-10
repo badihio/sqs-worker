@@ -29,9 +29,41 @@ uv add sqs-worker
 ## Quick Start
 
 ```python
+import logging
+import pydantic
 from sqs_worker import worker, models
 
-# Your worker implementation here
+logger = logging.getLogger("sqs_worker_example")
+
+
+class MessagePayload(
+    pydantic.BaseModel,
+):
+    value: str
+
+
+class MyWorker(
+    worker.Worker,
+):
+    def __init__(
+        self,
+        sqs_client,
+    ) -> None:
+        super().__init__(
+            logger=logger,
+            name="MyWorker",
+            sqs_client=sqs_client,
+            queue_name="worker-queue",
+            payload_class=MessagePayload,
+        )
+
+    def work(
+        self,
+        messages: list[models.Message[MessagePayload]],
+    ) -> None:
+        ...
+
+
 # See examples/ directory for detailed usage examples
 ```
 

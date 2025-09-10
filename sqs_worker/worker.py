@@ -54,17 +54,19 @@ class Worker:
         self.max_retry_attempts = max_retry_attempts
         self.pull_msgs_interval = pull_msgs_interval
         self.idle_limit = idle_limit
+        self.record_metrics = metrics_instrumentator is not None
 
-        self.metrics_instrumentator.add_counter(
-            name=self.EXCEPTIONS_METRIC_NAME,
-            description="Exception Counter",
-        ).add_counter(
-            name=self.WORK_MESSAGES_METRIC_NAME,
-            description="Number of messages processed",
-        ).add_histogram(
-            name=self.WORK_LATENCY_METRIC_NAME,
-            description="Time spent working on message",
-        )
+        if self.record_metrics:
+            self.metrics_instrumentator.add_counter(
+                name=self.EXCEPTIONS_METRIC_NAME,
+                description="Exception Counter",
+            ).add_counter(
+                name=self.WORK_MESSAGES_METRIC_NAME,
+                description="Number of messages processed",
+            ).add_histogram(
+                name=self.WORK_LATENCY_METRIC_NAME,
+                description="Time spent working on message",
+            )
 
     def start(
         self,
@@ -132,13 +134,14 @@ class Worker:
                     },
                 )
 
-                self.metrics_instrumentator.increment_counter(
-                    name=self.EXCEPTIONS_METRIC_NAME,
-                    attributes={
-                        "worker_name": self.name,
-                        "error_type": type(exception).__name__,
-                    },
-                )
+                if self.record_metrics:
+                    self.metrics_instrumentator.increment_counter(
+                        name=self.EXCEPTIONS_METRIC_NAME,
+                        attributes={
+                            "worker_name": self.name,
+                            "error_type": type(exception).__name__,
+                        },
+                    )
 
                 self.on_error(
                     exception=exception,
@@ -152,21 +155,21 @@ class Worker:
                     },
                 )
 
-                self.metrics_instrumentator.increment_counter(
-                    name=self.WORK_MESSAGES_METRIC_NAME,
-                    attributes={
-                        "worker_name": self.name,
-                    },
-                    amount=len(messages),
-                )
-
-                self.metrics_instrumentator.record_histogram(
-                    name=self.WORK_LATENCY_METRIC_NAME,
-                    attributes={
-                        "worker_name": self.name,
-                    },
-                    amount=(time.time() - start_time),
-                )
+                if self.record_metrics:
+                    self.metrics_instrumentator.increment_counter(
+                        name=self.WORK_MESSAGES_METRIC_NAME,
+                        attributes={
+                            "worker_name": self.name,
+                        },
+                        amount=len(messages),
+                    )
+                    self.metrics_instrumentator.record_histogram(
+                        name=self.WORK_LATENCY_METRIC_NAME,
+                        attributes={
+                            "worker_name": self.name,
+                        },
+                        amount=(time.time() - start_time),
+                    )
 
                 if self.auto_ack:
                     self.ack_all(
