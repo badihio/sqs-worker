@@ -1,3 +1,4 @@
+import datetime
 import logging
 
 import boto3
@@ -6,10 +7,13 @@ import pydantic
 import obsv_tools.metrics.instrumentator
 import sqs_worker
 
-from . import sqs_utils
+import sqs_utils
 
 
 logger = logging.getLogger('sqs_worker_example')
+
+
+logging.basicConfig(level=logging.INFO)
 
 
 class MessagePayload(
@@ -35,6 +39,7 @@ class MyWorker(
             queue_name=queue_name,
             metrics_instrumentator=metrics_instrumentator,
             payload_class=MessagePayload,
+            idle_limit=datetime.timedelta(seconds=2),
         )
 
     def work(

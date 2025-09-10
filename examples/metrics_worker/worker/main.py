@@ -1,6 +1,7 @@
 import datetime
 import logging
 import threading
+import os
 
 import boto3
 import mypy_boto3_sqs.client
@@ -60,16 +61,13 @@ def main() -> None:
 
     sqs_client = boto3.client(
         'sqs',
-        endpoint_url='http://localhost:4566',
-        region_name='us-east-1',
-        aws_access_key_id='test',
-        aws_secret_access_key='test',
+        endpoint_url=os.environ['SQS_ENDPOINT_URL'],
+        region_name=os.environ.get('AWS_REGION', 'us-east-1'),
+        aws_access_key_id=os.environ.get('AWS_ACCESS_KEY_ID', 'test'),
+        aws_secret_access_key=os.environ.get('AWS_SECRET_ACCESS_KEY', 'test'),
     )
     queue_name = 'my-queue'
     number_of_workers = 10
-
-    if not sqs_utils.sqs_connected(sqs_client=sqs_client):
-        raise RuntimeError('Cannot connect to SQS. Please ensure LocalStack is running by executing "localstack start".')
 
     sqs_utils.ensure_queue_exists(
         sqs_client=sqs_client,
@@ -91,10 +89,10 @@ def main() -> None:
         return MyWorker(
             sqs_client=boto3.client(
                 'sqs',
-                endpoint_url='http://localhost:4566',
-                region_name='us-east-1',
-                aws_access_key_id='test',
-                aws_secret_access_key='test',
+                endpoint_url=os.environ['SQS_ENDPOINT_URL'],
+                region_name=os.environ.get('AWS_REGION', 'us-east-1'),
+                aws_access_key_id=os.environ.get('AWS_ACCESS_KEY_ID', 'test'),
+                aws_secret_access_key=os.environ.get('AWS_SECRET_ACCESS_KEY', 'test'),
             ),
             queue_name=queue_name,
             metrics_instrumentator=metrics_instrumentator,

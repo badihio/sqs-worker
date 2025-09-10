@@ -35,6 +35,8 @@ class Worker:
         visibility_timeout: int = 30,
         auto_ack: bool = True,
         max_retry_attempts: int = 10,
+        pull_msgs_interval: datetime.timedelta = datetime.timedelta(seconds=0.5),
+        idle_limit: datetime.timedelta | None = None,
     ) -> None:
         self.name = name
         self.sqs_client = sqs_client
@@ -48,6 +50,8 @@ class Worker:
         self.payload_class = payload_class
         self.auto_ack = auto_ack
         self.max_retry_attempts = max_retry_attempts
+        self.pull_msgs_interval = pull_msgs_interval
+        self.idle_limit = idle_limit
 
         self.metrics_instrumentator.add_counter(
             name=self.EXCEPTIONS_METRIC_NAME,
@@ -67,12 +71,25 @@ class Worker:
             },
         )
 
+        idle_time = 0
+
         while self.active:
             try:
                 raw_messages: list[mypy_boto3_sqs.type_defs.MessageTypeDef] = self.pull_messages()
 
                 if not raw_messages:
-                    time.sleep(0.5)
+                    time.sleep(self.pull_msgs_interval.total_seconds())
+
+                    idle_time += self.pull_msgs_interval.total_seconds()
+                    if self.idle_limit and idle_time >= self.idle_limit.total_seconds():
+                        self.logger.info(
+                            msg='Idle limit reached, stopping worker',
+                            extra={
+                                'worker_name': self.name,
+                            },
+                        )
+
+                        self.stop()
 
                     continue
 
@@ -109,7 +126,7 @@ class Worker:
                 )
 
                 self.metrics_instrumentator.increment_counter(
-                    counter_name=self.EXCEPTIONS_METRIC_NAME,
+                    name=self.EXCEPTIONS_METRIC_NAME,
                     attributes={
                         'worker_name': self.name,
                         'error_type': type(exception).__name__,
@@ -129,7 +146,7 @@ class Worker:
                 )
 
                 self.metrics_instrumentator.record_histogram(
-                    histogram_name=self.WORK_LATENCY_METRIC_NAME,
+                    name=self.WORK_LATENCY_METRIC_NAME,
                     attributes={
                         'worker_name': self.name,
                     },
@@ -344,7 +361,7 @@ class Worker:
         exception: Exception,
         messages: list[models.Message],
     ) -> None:
-        pass
+        raise exception()
 
 
 def single(
