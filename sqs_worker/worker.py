@@ -177,7 +177,7 @@ class Worker:
             response = self.sqs_client.receive_message(
                 QueueUrl=queue_url,
                 MaxNumberOfMessages=min(10, self.max_messages - len(messages)),
-                WaitTimeSeconds=max(1, min(20, self.wait_for_messages_sec - int(wait_time_sec))),
+                WaitTimeSeconds=max(1, min(20, wait_for_messages_sec - int(wait_time_sec))),
                 VisibilityTimeout=self.visibility_timeout,
             )
 
