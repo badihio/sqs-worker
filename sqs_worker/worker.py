@@ -19,9 +19,9 @@ MAX_BATCH_SIZE = 10
 
 
 class Worker:
-    EXCEPTIONS_METRIC_NAME = 'sqs.worker.exceptions'
-    WORK_MESSAGES_METRIC_NAME = 'sqs.worker.work.messages'
-    WORK_LATENCY_METRIC_NAME = 'sqs.worker.work.latency'
+    EXCEPTIONS_METRIC_NAME = "sqs.worker.exceptions"
+    WORK_MESSAGES_METRIC_NAME = "sqs.worker.work.messages"
+    WORK_LATENCY_METRIC_NAME = "sqs.worker.work.latency"
 
     def __init__(
         self,
@@ -31,7 +31,8 @@ class Worker:
         queue_name: str,
         payload_class: type[models.T],
         max_messages: int = MAX_BATCH_SIZE,
-        metrics_instrumentator: obsv_tools.metrics.instrumentator.Instrumentator | None = None,
+        metrics_instrumentator: obsv_tools.metrics.instrumentator.Instrumentator
+        | None = None,
         wait_for_max_messages: datetime.timedelta = datetime.timedelta(seconds=1),
         visibility_timeout: int = 30,
         auto_ack: bool = True,
@@ -56,22 +57,22 @@ class Worker:
 
         self.metrics_instrumentator.add_counter(
             name=self.EXCEPTIONS_METRIC_NAME,
-            description='Exception Counter',
+            description="Exception Counter",
         ).add_counter(
             name=self.WORK_MESSAGES_METRIC_NAME,
-            description='Number of messages processed',
+            description="Number of messages processed",
         ).add_histogram(
             name=self.WORK_LATENCY_METRIC_NAME,
-            description='Time spent working on message',
+            description="Time spent working on message",
         )
 
     def start(
         self,
     ) -> None:
         self.logger.info(
-            msg='Starting worker',
+            msg="Starting worker",
             extra={
-                'worker_name': self.name,
+                "worker_name": self.name,
             },
         )
 
@@ -79,7 +80,9 @@ class Worker:
 
         while self.active:
             try:
-                raw_messages: list[mypy_boto3_sqs.type_defs.MessageTypeDef] = self.pull_messages()
+                raw_messages: list[mypy_boto3_sqs.type_defs.MessageTypeDef] = (
+                    self.pull_messages()
+                )
 
                 if not raw_messages:
                     time.sleep(self.pull_msgs_interval.total_seconds())
@@ -87,9 +90,9 @@ class Worker:
                     idle_time += self.pull_msgs_interval.total_seconds()
                     if self.idle_limit and idle_time >= self.idle_limit.total_seconds():
                         self.logger.info(
-                            msg='Idle limit reached, stopping worker',
+                            msg="Idle limit reached, stopping worker",
                             extra={
-                                'worker_name': self.name,
+                                "worker_name": self.name,
                             },
                         )
 
@@ -105,7 +108,7 @@ class Worker:
                 ]
             except Exception:
                 self.logger.exception(
-                    msg='Failed to pull messages',
+                    msg="Failed to pull messages",
                 )
 
                 continue
@@ -123,17 +126,17 @@ class Worker:
                 )
             except Exception as exception:
                 self.logger.exception(
-                    msg='Failed to process messages',
+                    msg="Failed to process messages",
                     extra={
-                        'worker_name': self.name,
+                        "worker_name": self.name,
                     },
                 )
 
                 self.metrics_instrumentator.increment_counter(
                     name=self.EXCEPTIONS_METRIC_NAME,
                     attributes={
-                        'worker_name': self.name,
-                        'error_type': type(exception).__name__,
+                        "worker_name": self.name,
+                        "error_type": type(exception).__name__,
                     },
                 )
 
@@ -143,16 +146,16 @@ class Worker:
                 )
             else:
                 self.logger.info(
-                    msg='Worker successfully processed messages',
+                    msg="Worker successfully processed messages",
                     extra={
-                        'worker_name': self.name,
+                        "worker_name": self.name,
                     },
                 )
 
                 self.metrics_instrumentator.increment_counter(
                     name=self.WORK_MESSAGES_METRIC_NAME,
                     attributes={
-                        'worker_name': self.name,
+                        "worker_name": self.name,
                     },
                     amount=len(messages),
                 )
@@ -160,7 +163,7 @@ class Worker:
                 self.metrics_instrumentator.record_histogram(
                     name=self.WORK_LATENCY_METRIC_NAME,
                     attributes={
-                        'worker_name': self.name,
+                        "worker_name": self.name,
                     },
                     amount=(time.time() - start_time),
                 )
@@ -174,9 +177,9 @@ class Worker:
         self,
     ) -> None:
         self.logger.info(
-            msg='Stopping worker',
+            msg="Stopping worker",
             extra={
-                'worker_name': self.name,
+                "worker_name": self.name,
             },
         )
 
@@ -202,16 +205,20 @@ class Worker:
 
         wait_for_messages_sec = int(self.wait_for_messages.total_seconds())
 
-        while len(messages) < self.max_messages and wait_time_sec <= wait_for_messages_sec:
+        while (
+            len(messages) < self.max_messages and wait_time_sec <= wait_for_messages_sec
+        ):
             response = self.sqs_client.receive_message(
                 QueueUrl=queue_url,
                 MaxNumberOfMessages=min(10, self.max_messages - len(messages)),
-                WaitTimeSeconds=max(1, min(20, wait_for_messages_sec - int(wait_time_sec))),
+                WaitTimeSeconds=max(
+                    1, min(20, wait_for_messages_sec - int(wait_time_sec))
+                ),
                 VisibilityTimeout=self.visibility_timeout,
             )
 
-            if 'Messages' in response:
-                messages.extend(response['Messages'])
+            if "Messages" in response:
+                messages.extend(response["Messages"])
 
             wait_time_sec = time.time() - start_time
 
@@ -221,17 +228,17 @@ class Worker:
         self,
         message: mypy_boto3_sqs.type_defs.MessageTypeDef,
     ) -> models.Message:
-        message_body = json.loads(message['Body'])
+        message_body = json.loads(message["Body"])
 
-        message_body.pop('queue_name', None)
-        message_body.pop('receipt_handle', None)
+        message_body.pop("queue_name", None)
+        message_body.pop("receipt_handle", None)
 
-        payload_data = message_body.pop('payload')
+        payload_data = message_body.pop("payload")
         payload = self.payload_class(**payload_data)
 
         return models.Message(
             queue_name=self.queue_name,
-            receipt_handle=message['ReceiptHandle'],
+            receipt_handle=message["ReceiptHandle"],
             payload=payload,
             **message_body,
         )
@@ -247,9 +254,9 @@ class Worker:
         ]
 
         self.logger.info(
-            msg='Enqueuing retry later messages',
+            msg="Enqueuing retry later messages",
             extra={
-                'messages_count': len(retry_messages),
+                "messages_count": len(retry_messages),
             },
         )
 
@@ -296,15 +303,17 @@ class Worker:
         for i in range(0, len(messages), MAX_BATCH_SIZE):
             batch = messages[i : i + MAX_BATCH_SIZE]
 
-            json_messages: list[mypy_boto3_sqs.type_defs.SendMessageBatchRequestEntryTypeDef] = []
+            json_messages: list[
+                mypy_boto3_sqs.type_defs.SendMessageBatchRequestEntryTypeDef
+            ] = []
 
             for idx, message in enumerate(batch):
                 entry = {
-                    'Id': f'message-{idx}',
-                    'MessageBody': message.model_dump_json(),
+                    "Id": f"message-{idx}",
+                    "MessageBody": message.model_dump_json(),
                 }
                 if delay_seconds is not None:
-                    entry['DelaySeconds'] = int(delay_seconds.total_seconds())
+                    entry["DelaySeconds"] = int(delay_seconds.total_seconds())
 
                 json_messages.append(entry)
 
@@ -334,8 +343,8 @@ class Worker:
                 ),
                 Entries=[
                     {
-                        'Id': f'message-{idx}',
-                        'ReceiptHandle': message.receipt_handle,
+                        "Id": f"message-{idx}",
+                        "ReceiptHandle": message.receipt_handle,
                     }
                     for idx, message in enumerate(messages_chunk)
                     if message.receipt_handle is not None
@@ -348,7 +357,7 @@ class Worker:
         visibility_timeout: int,
     ):
         if message.receipt_handle is None:
-            raise ValueError('Unable to extend visibility without receipt_handle')
+            raise ValueError("Unable to extend visibility without receipt_handle")
 
         self.sqs_client.change_message_visibility(
             QueueUrl=self.get_queue_url(
@@ -366,7 +375,7 @@ class Worker:
             QueueName=queue_name,
         )
 
-        return queue_data['QueueUrl']
+        return queue_data["QueueUrl"]
 
     def on_error(
         self,

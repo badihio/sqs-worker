@@ -1,1 +1,1 @@
-from . import sqs_utils
+from . import sqs_utils  # noqa: F401

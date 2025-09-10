@@ -3,7 +3,7 @@ import typing
 import pydantic
 
 
-T = typing.TypeVar('T', bound=pydantic.BaseModel)
+T = typing.TypeVar("T", bound=pydantic.BaseModel)
 
 
 class Message(

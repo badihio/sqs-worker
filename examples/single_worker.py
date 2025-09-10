@@ -10,7 +10,7 @@ import sqs_worker
 import sqs_utils
 
 
-logger = logging.getLogger('sqs_worker_example')
+logger = logging.getLogger("sqs_worker_example")
 
 
 logging.basicConfig(level=logging.INFO)
@@ -25,7 +25,6 @@ class MessagePayload(
 class MyWorker(
     sqs_worker.worker.Worker,
 ):
-
     def __init__(
         self,
         sqs_client: mypy_boto3_sqs.client.SQSClient,
@@ -34,7 +33,7 @@ class MyWorker(
     ) -> None:
         super().__init__(
             logger=logger,
-            name='MyWorker',
+            name="MyWorker",
             sqs_client=sqs_client,
             queue_name=queue_name,
             metrics_instrumentator=metrics_instrumentator,
@@ -47,7 +46,7 @@ class MyWorker(
         messages: list[sqs_worker.models.Message[MessagePayload]],
     ) -> None:
         for message in messages:
-            print(f'Processing message with: {message.payload.value}')
+            print(f"Processing message with: {message.payload.value}")
 
 
 def main() -> None:
@@ -56,16 +55,18 @@ def main() -> None:
     )
 
     sqs_client = boto3.client(
-        'sqs',
-        endpoint_url='http://localhost:4566',
-        region_name='us-east-1',
-        aws_access_key_id='test',
-        aws_secret_access_key='test',
+        "sqs",
+        endpoint_url="http://localhost:4566",
+        region_name="us-east-1",
+        aws_access_key_id="test",
+        aws_secret_access_key="test",
     )
-    queue_name = 'my-queue'
+    queue_name = "my-queue"
 
     if not sqs_utils.sqs_connected(sqs_client=sqs_client):
-        raise RuntimeError('Cannot connect to SQS. Please ensure LocalStack is running by executing "localstack start".')
+        raise RuntimeError(
+            'Cannot connect to SQS. Please ensure LocalStack is running by executing "localstack start".'
+        )
 
     sqs_utils.ensure_queue_exists(
         sqs_client=sqs_client,
@@ -76,9 +77,9 @@ def main() -> None:
         sqs_client=sqs_client,
         queue_name=queue_name,
         message=sqs_worker.models.Message(
-            version='1.0',
-            msg_type='greeting',
-            payload=MessagePayload(value='Hello, World!'),
+            version="1.0",
+            msg_type="greeting",
+            payload=MessagePayload(value="Hello, World!"),
         ),
     )
 
@@ -94,5 +95,5 @@ def main() -> None:
     )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
