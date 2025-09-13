@@ -4,14 +4,13 @@ import threading
 
 import boto3
 import mypy_boto3_sqs.client
-import pydantic
 import obsv_tools.metrics.instrumentator
-import sqs_worker
-
+import pydantic
 import sqs_utils
 
+import sqs_worker
 
-logger = logging.getLogger("sqs_worker_example")
+logger = logging.getLogger('sqs_worker_example')
 
 logging.basicConfig(level=logging.INFO)
 
@@ -33,7 +32,7 @@ class MyWorker(
     ) -> None:
         super().__init__(
             logger=logger,
-            name="MyWorker",
+            name='MyWorker',
             sqs_client=sqs_client,
             queue_name=queue_name,
             metrics_instrumentator=metrics_instrumentator,
@@ -49,7 +48,7 @@ class MyWorker(
         thread_id = threading.get_ident()
         for message in messages:
             logger.info(
-                msg=f"Thread {thread_id}: Processing message with: {message.payload.value}",
+                msg=f'Thread {thread_id}: Processing message with: {message.payload.value}',
             )
 
 
@@ -60,13 +59,13 @@ def main() -> None:
     )
 
     sqs_client = boto3.client(
-        "sqs",
-        endpoint_url="http://localhost:4566",
-        region_name="us-east-1",
-        aws_access_key_id="test",
-        aws_secret_access_key="test",
+        'sqs',
+        endpoint_url='http://localhost:4566',
+        region_name='us-east-1',
+        aws_access_key_id='test',
+        aws_secret_access_key='test',
     )
-    queue_name = "my-queue"
+    queue_name = 'my-queue'
     number_of_workers = 10
 
     if not sqs_utils.sqs_connected(sqs_client=sqs_client):
@@ -84,20 +83,20 @@ def main() -> None:
             sqs_client=sqs_client,
             queue_name=queue_name,
             message=sqs_worker.models.Message(
-                version="1.0",
-                msg_type="greeting",
-                payload=MessagePayload(value="Hello, World!"),
+                version='1.0',
+                msg_type='greeting',
+                payload=MessagePayload(value='Hello, World!'),
             ),
         )
 
     def worker_factory():
         return MyWorker(
             sqs_client=boto3.client(
-                "sqs",
-                endpoint_url="http://localhost:4566",
-                region_name="us-east-1",
-                aws_access_key_id="test",
-                aws_secret_access_key="test",
+                'sqs',
+                endpoint_url='http://localhost:4566',
+                region_name='us-east-1',
+                aws_access_key_id='test',
+                aws_secret_access_key='test',
             ),
             queue_name=queue_name,
             metrics_instrumentator=metrics_instrumentator,
@@ -109,5 +108,5 @@ def main() -> None:
     )
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

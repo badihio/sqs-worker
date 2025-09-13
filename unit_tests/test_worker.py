@@ -3,15 +3,15 @@ import json
 import logging
 import signal
 import time
-from unittest.mock import Mock, patch, ANY, call
+from unittest.mock import ANY, Mock, call, patch
 
-import pytest
-import pydantic
-
-import sqs_worker.worker as worker
-import sqs_worker.models as models
-import sqs_worker.exceptions as exceptions
 import obsv_tools.metrics.instrumentator as instrumentator
+import pydantic
+import pytest
+
+import sqs_worker.exceptions as exceptions
+import sqs_worker.models as models
+import sqs_worker.worker as worker
 
 
 class PayloadForTesting(pydantic.BaseModel):
@@ -39,7 +39,7 @@ def mock_instrumentator():
 
 @pytest.fixture
 def sample_payload():
-    return PayloadForTesting(message="test message", count=42)
+    return PayloadForTesting(message='test message', count=42)
 
 
 @pytest.fixture
@@ -47,10 +47,10 @@ def sample_message(
     sample_payload,
 ):
     return models.Message(
-        version="1.0",
-        msg_type="test",
-        queue_name="test_queue",
-        receipt_handle="receipt_123",
+        version='1.0',
+        msg_type='test',
+        queue_name='test_queue',
+        receipt_handle='receipt_123',
         payload=sample_payload,
         retry_attempt=0,
     )
@@ -61,17 +61,17 @@ def sample_raw_message(
     sample_payload,
 ):
     return {
-        "Body": json.dumps(
+        'Body': json.dumps(
             {
-                "version": "1.0",
-                "msg_type": "test",
-                "queue_name": "test_queue",
-                "receipt_handle": "receipt_123",
-                "payload": sample_payload.model_dump(),
-                "retry_attempt": 0,
+                'version': '1.0',
+                'msg_type': 'test',
+                'queue_name': 'test_queue',
+                'receipt_handle': 'receipt_123',
+                'payload': sample_payload.model_dump(),
+                'retry_attempt': 0,
             }
         ),
-        "ReceiptHandle": "receipt_123",
+        'ReceiptHandle': 'receipt_123',
     }
 
 
@@ -83,9 +83,9 @@ def test_worker(
 ):
     return worker.Worker(
         logger=mock_logger,
-        name="test_worker",
+        name='test_worker',
         sqs_client=mock_sqs_client,
-        queue_name="test_queue",
+        queue_name='test_queue',
         payload_class=PayloadForTesting,
         max_messages=5,
         metrics_instrumentator=mock_instrumentator,
@@ -105,9 +105,9 @@ class TestWorkerInit:
     ):
         test_worker = worker.Worker(
             logger=mock_logger,
-            name="test_worker",
+            name='test_worker',
             sqs_client=mock_sqs_client,
-            queue_name="test_queue",
+            queue_name='test_queue',
             payload_class=PayloadForTesting,
             max_messages=5,
             metrics_instrumentator=mock_instrumentator,
@@ -117,9 +117,9 @@ class TestWorkerInit:
             max_retry_attempts=3,
         )
 
-        assert test_worker.name == "test_worker"
+        assert test_worker.name == 'test_worker'
         assert test_worker.sqs_client == mock_sqs_client
-        assert test_worker.queue_name == "test_queue"
+        assert test_worker.queue_name == 'test_queue'
         assert test_worker.logger == mock_logger
         assert test_worker.max_messages == 5
         assert test_worker.wait_for_messages == datetime.timedelta(seconds=2)
@@ -136,26 +136,26 @@ class TestWorkerInit:
     ):
         worker.Worker(
             logger=Mock(),
-            name="test_worker",
+            name='test_worker',
             sqs_client=Mock(),
-            queue_name="test_queue",
+            queue_name='test_queue',
             payload_class=PayloadForTesting,
             metrics_instrumentator=mock_instrumentator,
         )
 
         assert mock_instrumentator.add_counter.call_args_list == [
             call(
-                name="sqs.worker.exceptions",
-                description="Exception Counter",
+                name='sqs.worker.exceptions',
+                description='Exception Counter',
             ),
             call(
-                name="sqs.worker.work.messages",
-                description="Number of messages processed",
+                name='sqs.worker.work.messages',
+                description='Number of messages processed',
             ),
         ]
         mock_instrumentator.add_histogram.assert_called_once_with(
-            name="sqs.worker.work.latency",
-            description="Time spent working on message",
+            name='sqs.worker.work.latency',
+            description='Time spent working on message',
         )
 
 
@@ -170,7 +170,7 @@ class TestWorkerStart:
         def mock_start():
             raw_messages = test_worker.pull_messages()
             if not raw_messages:
-                with patch("time.sleep") as mock_sleep:
+                with patch('time.sleep') as mock_sleep:
                     time.sleep(0.5)
                     mock_sleep.assert_called_with(0.5)
 
@@ -231,7 +231,7 @@ class TestWorkerStart:
         sample_message,
         mock_instrumentator,
     ):
-        test_exception = ValueError("test error")
+        test_exception = ValueError('test error')
         test_worker.pull_messages = Mock(return_value=[sample_raw_message])
         test_worker.parse_message = Mock(return_value=sample_message)
         test_worker.work = Mock(side_effect=test_exception)
@@ -247,23 +247,23 @@ class TestWorkerStart:
             test_worker.work(messages=messages)
         except Exception as exception:
             test_worker.logger.exception(
-                msg="Failed to process messages",
-                extra={"worker_name": test_worker.name},
+                msg='Failed to process messages',
+                extra={'worker_name': test_worker.name},
             )
             mock_instrumentator.increment_counter(
-                counter_name="sqs.manager.exceptions",
+                counter_name='sqs.manager.exceptions',
                 attributes={
-                    "worker_name": test_worker.name,
-                    "error_type": type(exception).__name__,
+                    'worker_name': test_worker.name,
+                    'error_type': type(exception).__name__,
                 },
             )
             test_worker.on_error(exception=exception, messages=messages)
 
         mock_instrumentator.increment_counter.assert_called_once_with(
-            counter_name="sqs.manager.exceptions",
+            counter_name='sqs.manager.exceptions',
             attributes={
-                "worker_name": "test_worker",
-                "error_type": "ValueError",
+                'worker_name': 'test_worker',
+                'error_type': 'ValueError',
             },
         )
         test_worker.on_error.assert_called_once_with(
@@ -276,15 +276,15 @@ class TestWorkerStart:
         test_worker,
         mock_logger,
     ):
-        test_worker.pull_messages = Mock(side_effect=Exception("pull error"))
+        test_worker.pull_messages = Mock(side_effect=Exception('pull error'))
 
         # Simulate one iteration of the start loop with exception handling
         try:
             test_worker.pull_messages()
         except Exception:
-            test_worker.logger.exception(msg="Failed to pull messages")
+            test_worker.logger.exception(msg='Failed to pull messages')
 
-        mock_logger.exception.assert_called_with(msg="Failed to pull messages")
+        mock_logger.exception.assert_called_with(msg='Failed to pull messages')
 
     def test_start_When_work_successful_Then_records_latency_metric(
         self,
@@ -299,7 +299,7 @@ class TestWorkerStart:
         test_worker.ack_all = Mock()
 
         # Simulate one iteration of the start loop with timing
-        with patch("time.time", side_effect=[100.0, 105.0]):
+        with patch('time.time', side_effect=[100.0, 105.0]):
             start_time = time.time()
             raw_messages = test_worker.pull_messages()
             messages = [
@@ -309,20 +309,20 @@ class TestWorkerStart:
             test_worker.work(messages=messages)
 
             test_worker.logger.info(
-                msg="Worker successfully processed messages",
-                extra={"worker_name": test_worker.name},
+                msg='Worker successfully processed messages',
+                extra={'worker_name': test_worker.name},
             )
             mock_instrumentator.record_histogram(
-                histogram_name="sqs.manager.work.latency",
-                attributes={"worker_name": test_worker.name},
+                histogram_name='sqs.manager.work.latency',
+                attributes={'worker_name': test_worker.name},
                 amount=(time.time() - start_time),
             )
             if test_worker.auto_ack:
                 test_worker.ack_all(messages=messages)
 
         mock_instrumentator.record_histogram.assert_called_once_with(
-            histogram_name="sqs.manager.work.latency",
-            attributes={"worker_name": "test_worker"},
+            histogram_name='sqs.manager.work.latency',
+            attributes={'worker_name': 'test_worker'},
             amount=5.0,
         )
 
@@ -337,8 +337,8 @@ class TestWorkerStop:
 
         assert test_worker.active is False
         mock_logger.info.assert_called_once_with(
-            msg="Stopping worker",
-            extra={"worker_name": "test_worker"},
+            msg='Stopping worker',
+            extra={'worker_name': 'test_worker'},
         )
 
 
@@ -357,30 +357,30 @@ class TestWorkerPullMessages:
         self,
         test_worker,
     ):
-        test_worker.get_queue_url = Mock(return_value="https://queue-url")
+        test_worker.get_queue_url = Mock(return_value='https://queue-url')
         # Provide enough empty responses to fill the wait time
         test_worker.sqs_client.receive_message.side_effect = [
-            {"Messages": [{"Body": "test", "ReceiptHandle": "handle1"}]},
+            {'Messages': [{'Body': 'test', 'ReceiptHandle': 'handle1'}]},
         ] + [{}] * 10  # Multiple empty responses to avoid StopIteration
 
         # Mock time to control the timeout
         with patch(
-            "time.time", side_effect=[0.0, 3.0]
+            'time.time', side_effect=[0.0, 3.0]
         ):  # Forces timeout after first call
             result = test_worker.pull_messages()
 
         assert len(result) >= 1
-        assert result[0]["Body"] == "test"
+        assert result[0]['Body'] == 'test'
         test_worker.sqs_client.receive_message.assert_called()
 
     def test_pull_messages_When_no_messages_Then_returns_empty_list(
         self,
         test_worker,
     ):
-        test_worker.get_queue_url = Mock(return_value="https://queue-url")
+        test_worker.get_queue_url = Mock(return_value='https://queue-url')
         test_worker.sqs_client.receive_message.return_value = {}
 
-        with patch("time.time", side_effect=[0.0, 3.0]):
+        with patch('time.time', side_effect=[0.0, 3.0]):
             result = test_worker.pull_messages()
 
         assert result == []
@@ -390,11 +390,11 @@ class TestWorkerPullMessages:
         test_worker,
     ):
         test_worker.max_messages = 2
-        test_worker.get_queue_url = Mock(return_value="https://queue-url")
+        test_worker.get_queue_url = Mock(return_value='https://queue-url')
         test_worker.sqs_client.receive_message.return_value = {
-            "Messages": [
-                {"Body": "test1", "ReceiptHandle": "handle1"},
-                {"Body": "test2", "ReceiptHandle": "handle2"},
+            'Messages': [
+                {'Body': 'test1', 'ReceiptHandle': 'handle1'},
+                {'Body': 'test2', 'ReceiptHandle': 'handle2'},
             ]
         }
 
@@ -413,12 +413,12 @@ class TestWorkerParseMessage:
         result = test_worker.parse_message(sample_raw_message)
 
         assert isinstance(result, models.Message)
-        assert result.version == "1.0"
-        assert result.msg_type == "test"
-        assert result.queue_name == "test_queue"
-        assert result.receipt_handle == "receipt_123"
+        assert result.version == '1.0'
+        assert result.msg_type == 'test'
+        assert result.queue_name == 'test_queue'
+        assert result.receipt_handle == 'receipt_123'
         assert isinstance(result.payload, PayloadForTesting)
-        assert result.payload.message == "test message"
+        assert result.payload.message == 'test message'
         assert result.payload.count == 42
         assert result.retry_attempt == 0
 
@@ -428,23 +428,23 @@ class TestWorkerParseMessage:
         sample_payload,
     ):
         raw_message = {
-            "Body": json.dumps(
+            'Body': json.dumps(
                 {
-                    "version": "1.0",
-                    "msg_type": "test",
-                    "queue_name": "ignored_queue",
-                    "receipt_handle": "ignored_handle",
-                    "payload": sample_payload.model_dump(),
-                    "retry_attempt": 1,
+                    'version': '1.0',
+                    'msg_type': 'test',
+                    'queue_name': 'ignored_queue',
+                    'receipt_handle': 'ignored_handle',
+                    'payload': sample_payload.model_dump(),
+                    'retry_attempt': 1,
                 }
             ),
-            "ReceiptHandle": "receipt_456",
+            'ReceiptHandle': 'receipt_456',
         }
 
         result = test_worker.parse_message(raw_message)
 
-        assert result.queue_name == "test_queue"
-        assert result.receipt_handle == "receipt_456"
+        assert result.queue_name == 'test_queue'
+        assert result.receipt_handle == 'receipt_456'
         assert result.retry_attempt == 1
 
 
@@ -463,14 +463,14 @@ class TestWorkerRetryLater:
 
         assert sample_message.retry_attempt == 3
         test_worker.publish_messages.assert_called_once_with(
-            queue_name="test_queue",
+            queue_name='test_queue',
             messages=[sample_message],
             delay_seconds=datetime.timedelta(minutes=10),
         )
         test_worker.ack_all.assert_called_once_with(messages=[sample_message])
         mock_logger.info.assert_called_once_with(
-            msg="Enqueuing retry later messages",
-            extra={"messages_count": 1},
+            msg='Enqueuing retry later messages',
+            extra={'messages_count': 1},
         )
 
     def test_retry_later_When_messages_exceed_retry_limit_Then_skips_messages(
@@ -486,7 +486,7 @@ class TestWorkerRetryLater:
         test_worker.retry_later(messages=[sample_message])
 
         test_worker.publish_messages.assert_called_once_with(
-            queue_name="test_queue",
+            queue_name='test_queue',
             messages=[],
             delay_seconds=datetime.timedelta(minutes=10),
         )
@@ -499,15 +499,15 @@ class TestWorkerPublishMessage:
         test_worker,
         sample_message,
     ):
-        test_worker.get_queue_url = Mock(return_value="https://queue-url")
+        test_worker.get_queue_url = Mock(return_value='https://queue-url')
 
         test_worker.publish_message(
-            queue_name="test_queue",
+            queue_name='test_queue',
             message=sample_message,
         )
 
         test_worker.sqs_client.send_message.assert_called_once_with(
-            QueueUrl="https://queue-url",
+            QueueUrl='https://queue-url',
             MessageBody=sample_message.model_dump_json(),
         )
 
@@ -520,7 +520,7 @@ class TestWorkerPublishMessages:
         test_worker.get_queue_url = Mock()
 
         test_worker.publish_messages(
-            queue_name="test_queue",
+            queue_name='test_queue',
             messages=[],
         )
 
@@ -532,21 +532,21 @@ class TestWorkerPublishMessages:
         test_worker,
         sample_message,
     ):
-        test_worker.get_queue_url = Mock(return_value="https://queue-url")
+        test_worker.get_queue_url = Mock(return_value='https://queue-url')
 
         test_worker.publish_messages(
-            queue_name="test_queue",
+            queue_name='test_queue',
             messages=[sample_message],
         )
 
         expected_entries = [
             {
-                "Id": "message-0",
-                "MessageBody": sample_message.model_dump_json(),
+                'Id': 'message-0',
+                'MessageBody': sample_message.model_dump_json(),
             }
         ]
         test_worker.sqs_client.send_message_batch.assert_called_once_with(
-            QueueUrl="https://queue-url",
+            QueueUrl='https://queue-url',
             Entries=expected_entries,
         )
 
@@ -555,24 +555,24 @@ class TestWorkerPublishMessages:
         test_worker,
         sample_message,
     ):
-        test_worker.get_queue_url = Mock(return_value="https://queue-url")
+        test_worker.get_queue_url = Mock(return_value='https://queue-url')
         delay = datetime.timedelta(minutes=5)
 
         test_worker.publish_messages(
-            queue_name="test_queue",
+            queue_name='test_queue',
             messages=[sample_message],
             delay_seconds=delay,
         )
 
         expected_entries = [
             {
-                "Id": "message-0",
-                "MessageBody": sample_message.model_dump_json(),
-                "DelaySeconds": 300,
+                'Id': 'message-0',
+                'MessageBody': sample_message.model_dump_json(),
+                'DelaySeconds': 300,
             }
         ]
         test_worker.sqs_client.send_message_batch.assert_called_once_with(
-            QueueUrl="https://queue-url",
+            QueueUrl='https://queue-url',
             Entries=expected_entries,
         )
 
@@ -583,16 +583,16 @@ class TestWorkerPublishMessages:
     ):
         messages = [
             models.Message(
-                version="1.0",
-                msg_type="test",
+                version='1.0',
+                msg_type='test',
                 payload=sample_payload,
             )
             for _ in range(25)
         ]
-        test_worker.get_queue_url = Mock(return_value="https://queue-url")
+        test_worker.get_queue_url = Mock(return_value='https://queue-url')
 
         test_worker.publish_messages(
-            queue_name="test_queue",
+            queue_name='test_queue',
             messages=messages,
         )
 
@@ -618,18 +618,18 @@ class TestWorkerAckAll:
         test_worker,
         sample_message,
     ):
-        test_worker.get_queue_url = Mock(return_value="https://queue-url")
+        test_worker.get_queue_url = Mock(return_value='https://queue-url')
 
         test_worker.ack_all(messages=[sample_message])
 
         expected_entries = [
             {
-                "Id": "message-0",
-                "ReceiptHandle": "receipt_123",
+                'Id': 'message-0',
+                'ReceiptHandle': 'receipt_123',
             }
         ]
         test_worker.sqs_client.delete_message_batch.assert_called_once_with(
-            QueueUrl="https://queue-url",
+            QueueUrl='https://queue-url',
             Entries=expected_entries,
         )
 
@@ -639,17 +639,17 @@ class TestWorkerAckAll:
         sample_payload,
     ):
         message_without_handle = models.Message(
-            version="1.0",
-            msg_type="test",
+            version='1.0',
+            msg_type='test',
             payload=sample_payload,
             receipt_handle=None,
         )
-        test_worker.get_queue_url = Mock(return_value="https://queue-url")
+        test_worker.get_queue_url = Mock(return_value='https://queue-url')
 
         test_worker.ack_all(messages=[message_without_handle])
 
         test_worker.sqs_client.delete_message_batch.assert_called_once_with(
-            QueueUrl="https://queue-url",
+            QueueUrl='https://queue-url',
             Entries=[],
         )
 
@@ -660,7 +660,7 @@ class TestWorkerExtendMessageVisibility:
         test_worker,
         sample_message,
     ):
-        test_worker.get_queue_url = Mock(return_value="https://queue-url")
+        test_worker.get_queue_url = Mock(return_value='https://queue-url')
 
         test_worker.extend_message_visibility(
             message=sample_message,
@@ -668,8 +668,8 @@ class TestWorkerExtendMessageVisibility:
         )
 
         test_worker.sqs_client.change_message_visibility.assert_called_once_with(
-            QueueUrl="https://queue-url",
-            ReceiptHandle="receipt_123",
+            QueueUrl='https://queue-url',
+            ReceiptHandle='receipt_123',
             VisibilityTimeout=60,
         )
 
@@ -679,14 +679,14 @@ class TestWorkerExtendMessageVisibility:
         sample_payload,
     ):
         message_without_handle = models.Message(
-            version="1.0",
-            msg_type="test",
+            version='1.0',
+            msg_type='test',
             payload=sample_payload,
             receipt_handle=None,
         )
 
         with pytest.raises(
-            ValueError, match="Unable to extend visibility without receipt_handle"
+            ValueError, match='Unable to extend visibility without receipt_handle'
         ):
             test_worker.extend_message_visibility(
                 message=message_without_handle,
@@ -700,14 +700,14 @@ class TestWorkerGetQueueUrl:
         test_worker,
     ):
         test_worker.sqs_client.get_queue_url.return_value = {
-            "QueueUrl": "https://queue-url"
+            'QueueUrl': 'https://queue-url'
         }
 
-        result = test_worker.get_queue_url(queue_name="test_queue")
+        result = test_worker.get_queue_url(queue_name='test_queue')
 
-        assert result == "https://queue-url"
+        assert result == 'https://queue-url'
         test_worker.sqs_client.get_queue_url.assert_called_once_with(
-            QueueName="test_queue"
+            QueueName='test_queue'
         )
 
 
@@ -717,7 +717,7 @@ class TestWorkerOnError:
         test_worker,
         sample_message,
     ):
-        exception = ValueError("test error")
+        exception = ValueError('test error')
 
         result = test_worker.on_error(
             exception=exception,
@@ -733,7 +733,7 @@ class TestSingle:
     ):
         worker_factory = Mock()
 
-        with patch.object(worker, "multiple") as mock_multiple:
+        with patch.object(worker, 'multiple') as mock_multiple:
             worker.single(worker_factory)
 
         mock_multiple.assert_called_once_with(
@@ -749,8 +749,8 @@ class TestMultiple:
     ):
         worker_factory = Mock(return_value=test_worker)
 
-        with patch("concurrent.futures.ThreadPoolExecutor") as mock_executor_class:
-            with patch("signal.signal") as mock_signal:
+        with patch('concurrent.futures.ThreadPoolExecutor') as mock_executor_class:
+            with patch('signal.signal') as mock_signal:
                 mock_executor = Mock()
                 mock_executor_class.return_value = mock_executor
 
@@ -781,8 +781,8 @@ class TestMultiple:
             nonlocal captured_handler
             captured_handler = handler
 
-        with patch("concurrent.futures.ThreadPoolExecutor"):
-            with patch("signal.signal", side_effect=capture_signal_handler):
+        with patch('concurrent.futures.ThreadPoolExecutor'):
+            with patch('signal.signal', side_effect=capture_signal_handler):
                 worker.multiple(
                     worker_factory=worker_factory,
                     n=2,

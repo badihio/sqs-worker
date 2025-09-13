@@ -40,3 +40,18 @@ dev = [
     "pytest>=8.4.2",
     "ruff>=0.13.0",
 ]
+
+[tool.ruff]
+select = ["I"]
+
+[tool.ruff.lint]
+select = ["I"]
+
+[tool.ruff.lint.isort]
+force-single-line = false
+force-sort-within-sections = true
+split-on-trailing-comma = true
+
+[tool.ruff.format]
+# Use single quotes instead of double quotes
+quote-style = "single"

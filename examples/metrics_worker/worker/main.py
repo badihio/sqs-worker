@@ -1,17 +1,17 @@
 import datetime
 import logging
+import os
 import random
 import threading
-import os
 import time
 
 import boto3
-import pydantic
 import obsv_tools.metrics.instrumentator
+import pydantic
+
 import sqs_worker
 
-
-logger = logging.getLogger("sqs_worker_example")
+logger = logging.getLogger('sqs_worker_example')
 
 logging.basicConfig(level=logging.INFO)
 
@@ -33,7 +33,7 @@ class MyWorker(
     ) -> None:
         super().__init__(
             logger=logger,
-            name="MyWorker",
+            name='MyWorker',
             sqs_client=sqs_client,
             queue_name=queue_name,
             metrics_instrumentator=metrics_instrumentator,
@@ -52,7 +52,7 @@ class MyWorker(
             time.sleep(wait_time)
 
             logger.info(
-                msg=f"Thread {thread_id}: Finished processing message with: {message.payload.value}",
+                msg=f'Thread {thread_id}: Finished processing message with: {message.payload.value}',
             )
 
 
@@ -66,31 +66,31 @@ def wait_for_sqs_queue(
             sqs_client.list_queues()
 
             sqs_client.get_queue_url(QueueName=queue_name)
-            logger.info(f"Queue {queue_name} is available")
+            logger.info(f'Queue {queue_name} is available')
 
             return
         except sqs_client.exceptions.QueueDoesNotExist:
             logger.info(
-                msg=f"Queue {queue_name} does not exist yet, waiting...",
+                msg=f'Queue {queue_name} does not exist yet, waiting...',
                 extra={
-                    "queue_name": queue_name,
-                    "attempt": i + 1,
-                    "max_retries": max_retries,
+                    'queue_name': queue_name,
+                    'attempt': i + 1,
+                    'max_retries': max_retries,
                 },
             )
             time.sleep(2)
         except Exception:
             logger.info(
-                msg="Waiting for SQS service...",
+                msg='Waiting for SQS service...',
                 extra={
-                    "queue_name": queue_name,
-                    "attempt": i + 1,
-                    "max_retries": max_retries,
+                    'queue_name': queue_name,
+                    'attempt': i + 1,
+                    'max_retries': max_retries,
                 },
             )
             time.sleep(2)
 
-    raise Exception(f"Queue {queue_name} is not available after waiting")
+    raise Exception(f'Queue {queue_name} is not available after waiting')
 
 
 def main() -> None:
@@ -100,27 +100,27 @@ def main() -> None:
     )
 
     sqs_client = boto3.client(
-        "sqs",
-        endpoint_url=os.environ["SQS_ENDPOINT_URL"],
-        region_name=os.environ.get("AWS_REGION", "us-east-1"),
-        aws_access_key_id=os.environ.get("AWS_ACCESS_KEY_ID", "test"),
-        aws_secret_access_key=os.environ.get("AWS_SECRET_ACCESS_KEY", "test"),
+        'sqs',
+        endpoint_url=os.environ['SQS_ENDPOINT_URL'],
+        region_name=os.environ.get('AWS_REGION', 'us-east-1'),
+        aws_access_key_id=os.environ.get('AWS_ACCESS_KEY_ID', 'test'),
+        aws_secret_access_key=os.environ.get('AWS_SECRET_ACCESS_KEY', 'test'),
     )
     wait_for_sqs_queue(
         sqs_client=sqs_client,
-        queue_name=os.environ["SQS_QUEUE_NAME"],
+        queue_name=os.environ['SQS_QUEUE_NAME'],
     )
 
     def worker_factory():
         return MyWorker(
             sqs_client=boto3.client(
-                "sqs",
-                endpoint_url=os.environ["SQS_ENDPOINT_URL"],
-                region_name=os.environ.get("AWS_REGION", "us-east-1"),
-                aws_access_key_id=os.environ.get("AWS_ACCESS_KEY_ID", "test"),
-                aws_secret_access_key=os.environ.get("AWS_SECRET_ACCESS_KEY", "test"),
+                'sqs',
+                endpoint_url=os.environ['SQS_ENDPOINT_URL'],
+                region_name=os.environ.get('AWS_REGION', 'us-east-1'),
+                aws_access_key_id=os.environ.get('AWS_ACCESS_KEY_ID', 'test'),
+                aws_secret_access_key=os.environ.get('AWS_SECRET_ACCESS_KEY', 'test'),
             ),
-            queue_name=os.environ["SQS_QUEUE_NAME"],
+            queue_name=os.environ['SQS_QUEUE_NAME'],
             metrics_instrumentator=metrics_instrumentator,
         )
 
@@ -130,5 +130,5 @@ def main() -> None:
     )
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
